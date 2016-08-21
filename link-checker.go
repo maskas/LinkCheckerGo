@@ -12,6 +12,8 @@ import (
 	"strconv"
 )
 
+//routine
+
 type Result struct {
     url string
     status int
@@ -27,24 +29,24 @@ Check an array of urls for 404 errors
 first channel returns results
 next channel returns true when all urls are checked.
 */
-func checkUrls(urls []string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
+// func checkUrls(urls []string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
 
-	go func() {
-		singleUrlFinishChan := make(chan bool)
+// 	go func() {
+// 		singleUrlFinishChan := make(chan bool)
  		
- 		for _,url := range urls { //initialize checking of all URLs
-			go checkUrl(url, resultChan, urlDiscoveryChan, singleUrlFinishChan)
-  		}
-  		for i := 0; i < len(urls); i++ { //wait till all urls all hecked
-  			<-singleUrlFinishChan
-  		}
-  		finishChan <- true
-	}()
-}
+//  		for _,url := range urls { //initialize checking of all URLs
+// 			go checkUrl(url, resultChan, urlDiscoveryChan, singleUrlFinishChan)
+//   		}
+//   		for i := 0; i < len(urls); i++ { //wait till all urls all hecked
+//   			<-singleUrlFinishChan
+//   		}
+//   		finishChan <- true
+// 	}()
+// }
 
 func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, singleUrlFinishChan chan bool) {
 	go func() {
-		fmt.Println("Checking url " + url)
+		//fmt.Println("Checking url " + url)
 		r, err := http.Get(url)
 		if err != nil {
 			resultChan <- Result{url: url, status: 0, message: "Fatal error " + err.Error()}
@@ -83,19 +85,23 @@ func registerNewUrls(newUrls []string) {
 		knownUrls[newUrl] = true
 	}
 }
-func find404Errors(urls []string, limit int) bool {
+func find404Errors(url string, limit int) bool {
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan string)
 	finishChan := make(chan bool)
-	checkUrls(urls, resultChan, urlDiscoveryChan, finishChan)
+	pendingChecks := 1
+	//checkUrls(urls, resultChan, urlDiscoveryChan, finishChan)
 	count := 0
 
 	finishOrLimitChan := make(chan bool)
 
+
 	go func(urlDiscoveryChan chan string) {
 		for {
 			newUrl := <-urlDiscoveryChan
-			fmt.Println("New URL detected " + newUrl)
+			//fmt.Println("New URL detected " + newUrl)
+			pendingChecks++
+			go checkUrl(newUrl, resultChan, urlDiscoveryChan, finishChan)
 		}
 	}(urlDiscoveryChan)
 
@@ -113,8 +119,14 @@ func find404Errors(urls []string, limit int) bool {
 
 	go func(finishChan <-chan bool, finishOrLimitChan chan bool) {
 		<-finishChan
-		finishOrLimitChan <- true
+		pendingChecks--
+		if pendingChecks == 0 {
+			finishOrLimitChan <- true	
+		}
 	}(finishChan, finishOrLimitChan)
+
+	//init the first check
+	go checkUrl(url, resultChan, urlDiscoveryChan, finishChan)
 
 
 	<-finishOrLimitChan
@@ -123,7 +135,6 @@ func find404Errors(urls []string, limit int) bool {
 
 
 func main() {
-	urls := []string{"https://www.tgstatic.com/lt", "https://www.tgstatic.com/en"}
-	results := find404Errors(urls, 10)
+	results := find404Errors("https://www.tgstatic.com/en", 100)
 	fmt.Println(results)
 }
