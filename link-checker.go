@@ -2,7 +2,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"log"
 	//"os"
 	//"io"
 	//"reflect"
@@ -15,6 +14,7 @@ import (
 type Result struct {
     url string
     status int
+    message string
 }
 
 var (
@@ -26,55 +26,42 @@ Check an array of urls for 404 errors
 first channel returns results
 next channel returns true when all urls are checked.
 */
-func checkUrls(urls []string) (<-chan Result, <-chan bool) {
-	resultChan := make(chan Result)
-	finishChan := make(chan bool)
+func checkUrls(urls []string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
 
 	go func() {
-		internalResultChan := make(chan Result)
 		internalFinishChan := make(chan bool)
-
-		go func() { //pass trhough all results
-			result := <-internalResultChan
-			resultChan <- result
-			}()
  		
  		for _,url := range urls { //initialize checking of all URLs
-			checkUrl(url, internalResultChan, internalFinishChan)
+ 			fmt.Println(url)
+			go checkUrl(url, resultChan, urlDiscoveryChan, internalFinishChan)
   		}
   		for i := 0; i < len(urls); i++ { //wait till all urls all hecked
   			<-internalFinishChan
   		}
   		finishChan <- true
 	}()
-
-
-  	return resultChan, finishChan
 }
 
-func checkUrl(url string, resultChan chan Result, finishChan chan bool) {
+func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
 	go func() {
+		fmt.Println("Checking url " + url)
 		r, err := http.Get(url)
 		if err != nil {
-			log.Fatal(err)
-			fmt.Println("Error")
+			resultChan <- Result{url: url, status: 0, message: "Fatal error " + err.Error()}
 		} else {
 			defer r.Body.Close()
-
 			body, err := ioutil.ReadAll(r.Body)
-
 			if err != nil {
-				fmt.Println(err)
+				resultChan <- Result{url: url, status: 0, message: "Fatal error " + err.Error()}
 			} else {
 				stringBody := fmt.Sprintf("%s", body)
 				utf8.RuneCountInString(stringBody)
 				newUrls := findUrls(stringBody)
 				registerNewUrls(newUrls)
-				// for _,newUrl := range newUrls {
-				// 	fmt.Println(newUrl)
-				// }
+				//checkUrls(newUrls, resultChan, finishChan)
+				fmt.Println("Result " + url)
+				resultChan <- Result{url: url, status: r.StatusCode, message: ""}
   			}
-			fmt.Println(url + " Succeeded")
 		}
 		finishChan <- true
 	}()
@@ -95,18 +82,41 @@ func registerNewUrls(newUrls []string) {
 		knownUrls[newUrl] = true
 	}
 }
+func startChecking(urls []string, limit int) bool {
+	resultChan := make(chan Result)
+	urlDiscoveryChan := make(chan string)
+	finishChan := make(chan bool)
+	checkUrls(urls, resultChan, urlDiscoveryChan, finishChan)
+	count := 0
 
+	finishOrLimitChan := make(chan bool)
+
+	go func(finishOrLimitChan chan bool) {
+		for {
+			if count == limit {
+				fmt.Println("Limit reached")
+				finishOrLimitChan <- true
+			}
+			fmt.Println("Listening")
+			result := <-resultChan
+			fmt.Println(result)
+			count++
+		}
+	}(finishOrLimitChan)
+
+	// go	 func(finishChan <-chan bool, finishOrLimitChan chan bool) {
+	// 	<-finishChan
+	// 	finishOrLimitChan <- true
+	// }(finishChan, finishOrLimitChan)
+
+
+	<-finishOrLimitChan
+	return true
+}
 
 
 func main() {
 	urls := []string{"https://www.tgstatic.com/lt", "https://www.tgstatic.com/en"}
-	resultChan, finishChan := checkUrls(urls)
-	go func() {
-		result := <-resultChan
-		fmt.Println(result)
-	}()
-
-	registerNewUrls([]string {"aaa", "bbb"})
-	<-finishChan
-	fmt.Println(knownUrls)
+	results := startChecking(urls, 10)
+	fmt.Println(results)
 }
