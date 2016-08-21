@@ -12,15 +12,15 @@ import (
 )
 
 type Result struct {
-    Field1 string
-    Field2 int
+    url string
+    status int
 }
 
 func checkUrl(url string) <-chan bool {
 	c := make(chan bool)
 
 	go func() {
-			fmt.Println("Start")
+		fmt.Println("Start")
 		//	r, err := http.Get("https://www.transfergo.com/lt")
 		r, err := http.Get(url)
 		if err != nil {
@@ -46,6 +46,8 @@ func checkUrl(url string) <-chan bool {
 	//		fmt.Println(r.Body)
 	//	    fmt.Println("hello world")	
 		}
+
+		//res := new(Result)
 		c <- true
 	}()
 	return c
@@ -53,7 +55,8 @@ func checkUrl(url string) <-chan bool {
 
 func main() {
 	//time.Sleep(3000 * time.Millisecond)
-	c := checkUrl("https://www.transfergo.com/lt")
+
+	c := checkUrl("https://www.tgstatic.com/lt")
 	a := <-c
 	fmt.Println(a)
 
