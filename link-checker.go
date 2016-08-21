@@ -29,20 +29,20 @@ next channel returns true when all urls are checked.
 func checkUrls(urls []string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
 
 	go func() {
-		internalFinishChan := make(chan bool)
+		singleUrlFinishChan := make(chan bool)
  		
  		for _,url := range urls { //initialize checking of all URLs
  			fmt.Println(url)
-			go checkUrl(url, resultChan, urlDiscoveryChan, internalFinishChan)
+			go checkUrl(url, resultChan, urlDiscoveryChan, singleUrlFinishChan)
   		}
   		for i := 0; i < len(urls); i++ { //wait till all urls all hecked
-  			<-internalFinishChan
+  			<-singleUrlFinishChan
   		}
   		finishChan <- true
 	}()
 }
 
-func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
+func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, singleUrlFinishChan chan bool) {
 	go func() {
 		fmt.Println("Checking url " + url)
 		r, err := http.Get(url)
@@ -63,7 +63,7 @@ func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, 
 				resultChan <- Result{url: url, status: r.StatusCode, message: ""}
   			}
 		}
-		finishChan <- true
+		singleUrlFinishChan <- true
 	}()
 }
 
@@ -104,10 +104,10 @@ func startChecking(urls []string, limit int) bool {
 		}
 	}(finishOrLimitChan)
 
-	// go	 func(finishChan <-chan bool, finishOrLimitChan chan bool) {
-	// 	<-finishChan
-	// 	finishOrLimitChan <- true
-	// }(finishChan, finishOrLimitChan)
+	go func(finishChan <-chan bool, finishOrLimitChan chan bool) {
+		<-finishChan
+		finishOrLimitChan <- true
+	}(finishChan, finishOrLimitChan)
 
 
 	<-finishOrLimitChan
