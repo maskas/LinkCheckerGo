@@ -20,30 +20,6 @@ type Result struct {
     message string
 }
 
-var (
-	knownUrls = make(map[string]bool)
-)
-
-/*
-Check an array of urls for 404 errors
-first channel returns results
-next channel returns true when all urls are checked.
-*/
-// func checkUrls(urls []string, resultChan chan Result, urlDiscoveryChan chan string, finishChan chan bool) {
-
-// 	go func() {
-// 		singleUrlFinishChan := make(chan bool)
- 		
-//  		for _,url := range urls { //initialize checking of all URLs
-// 			go checkUrl(url, resultChan, urlDiscoveryChan, singleUrlFinishChan)
-//   		}
-//   		for i := 0; i < len(urls); i++ { //wait till all urls all hecked
-//   			<-singleUrlFinishChan
-//   		}
-//   		finishChan <- true
-// 	}()
-// }
-
 func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, singleUrlFinishChan chan bool) {
 	go func() {
 		//fmt.Println("Checking url " + url)
@@ -62,7 +38,6 @@ func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, 
 				for _,newUrl := range newUrls {
 					urlDiscoveryChan <- newUrl
 				}
-				//checkUrls(newUrls, resultChan, finishChan)
 				resultChan <- Result{url: url, status: r.StatusCode, message: ""}
   			}
 		}
@@ -80,25 +55,27 @@ func findUrls(html string) []string {
 	return urls
 }
 
-func registerNewUrls(newUrls []string) {
-	for _,newUrl := range newUrls {
-		knownUrls[newUrl] = true
-	}
-}
 func find404Errors(url string, limit int) bool {
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan string)
 	finishChan := make(chan bool)
 	pendingChecks := 1
-	//checkUrls(urls, resultChan, urlDiscoveryChan, finishChan)
 	count := 0
+	knownUrls := make(map[string]bool)
 
 	finishOrLimitChan := make(chan bool)
 
 
 	go func(urlDiscoveryChan chan string) {
 		for {
+
 			newUrl := <-urlDiscoveryChan
+			//fmt.Println("New URL " + newUrl)
+			//fmt.Println("Pending checks " + strconv.Itoa(pendingChecks))
+			if knownUrls[newUrl] {
+				continue
+			}
+			knownUrls[newUrl] = true
 			//fmt.Println("New URL detected " + newUrl)
 			pendingChecks++
 			go checkUrl(newUrl, resultChan, urlDiscoveryChan, finishChan)
@@ -118,10 +95,13 @@ func find404Errors(url string, limit int) bool {
 	}(finishOrLimitChan)
 
 	go func(finishChan <-chan bool, finishOrLimitChan chan bool) {
-		<-finishChan
-		pendingChecks--
-		if pendingChecks == 0 {
-			finishOrLimitChan <- true	
+		for {
+			<-finishChan
+			pendingChecks--
+			fmt.Println("Check finished " + strconv.Itoa(pendingChecks))
+			if pendingChecks == 0 {
+				finishOrLimitChan <- true	
+			}	
 		}
 	}(finishChan, finishOrLimitChan)
 
