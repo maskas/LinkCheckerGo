@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 	//"time"
 	"regexp"
+	"strconv"
 )
 
 type Result struct {
@@ -32,7 +33,6 @@ func checkUrls(urls []string, resultChan chan Result, urlDiscoveryChan chan stri
 		singleUrlFinishChan := make(chan bool)
  		
  		for _,url := range urls { //initialize checking of all URLs
- 			fmt.Println(url)
 			go checkUrl(url, resultChan, urlDiscoveryChan, singleUrlFinishChan)
   		}
   		for i := 0; i < len(urls); i++ { //wait till all urls all hecked
@@ -57,9 +57,10 @@ func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, 
 				stringBody := fmt.Sprintf("%s", body)
 				utf8.RuneCountInString(stringBody)
 				newUrls := findUrls(stringBody)
-				registerNewUrls(newUrls)
+				for _,newUrl := range newUrls {
+					urlDiscoveryChan <- newUrl
+				}
 				//checkUrls(newUrls, resultChan, finishChan)
-				fmt.Println("Result " + url)
 				resultChan <- Result{url: url, status: r.StatusCode, message: ""}
   			}
 		}
@@ -82,7 +83,7 @@ func registerNewUrls(newUrls []string) {
 		knownUrls[newUrl] = true
 	}
 }
-func startChecking(urls []string, limit int) bool {
+func find404Errors(urls []string, limit int) bool {
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan string)
 	finishChan := make(chan bool)
@@ -91,15 +92,21 @@ func startChecking(urls []string, limit int) bool {
 
 	finishOrLimitChan := make(chan bool)
 
+	go func(urlDiscoveryChan chan string) {
+		for {
+			newUrl := <-urlDiscoveryChan
+			fmt.Println("New URL detected " + newUrl)
+		}
+	}(urlDiscoveryChan)
+
 	go func(finishOrLimitChan chan bool) {
 		for {
 			if count == limit {
 				fmt.Println("Limit reached")
 				finishOrLimitChan <- true
 			}
-			fmt.Println("Listening")
 			result := <-resultChan
-			fmt.Println(result)
+			fmt.Println(strconv.Itoa(result.status) + " " + result.url)
 			count++
 		}
 	}(finishOrLimitChan)
@@ -117,6 +124,6 @@ func startChecking(urls []string, limit int) bool {
 
 func main() {
 	urls := []string{"https://www.tgstatic.com/lt", "https://www.tgstatic.com/en"}
-	results := startChecking(urls, 10)
+	results := find404Errors(urls, 10)
 	fmt.Println(results)
 }
