@@ -20,7 +20,12 @@ type Result struct {
     message string
 }
 
-func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, singleUrlFinishChan chan bool) {
+type DiscoveredUrl struct {
+	url string
+	source string
+}
+
+func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan DiscoveredUrl, singleUrlFinishChan chan bool) {
 	go func() {
 		//fmt.Println("Checking url " + url)
 		r, err := http.Get(url)
@@ -36,7 +41,7 @@ func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan string, 
 				utf8.RuneCountInString(stringBody)
 				newUrls := findUrls(stringBody)
 				for _,newUrl := range newUrls {
-					urlDiscoveryChan <- newUrl
+					urlDiscoveryChan <- DiscoveredUrl{url: newUrl, source: url}
 				}
 				resultChan <- Result{url: url, status: r.StatusCode, message: ""}
   			}
@@ -57,28 +62,28 @@ func findUrls(html string) []string {
 
 func find404Errors(url string, limit int) bool {
 	resultChan := make(chan Result)
-	urlDiscoveryChan := make(chan string)
+	urlDiscoveryChan := make(chan DiscoveredUrl)
 	finishChan := make(chan bool)
 	pendingChecks := 1
 	count := 0
-	knownUrls := make(map[string]bool)
+	knownUrls := make(map[string]string)
 
 	finishOrLimitChan := make(chan bool)
 
 
-	go func(urlDiscoveryChan chan string) {
+	go func(urlDiscoveryChan chan DiscoveredUrl) {
 		for {
 
-			newUrl := <-urlDiscoveryChan
+			discoveredUrl := <-urlDiscoveryChan
 			//fmt.Println("New URL " + newUrl)
 			//fmt.Println("Pending checks " + strconv.Itoa(pendingChecks))
-			if knownUrls[newUrl] {
+			if _, ok := knownUrls[discoveredUrl.url]; ok {
 				continue
 			}
-			knownUrls[newUrl] = true
+			knownUrls[discoveredUrl.url] = discoveredUrl.source
 			//fmt.Println("New URL detected " + newUrl)
 			pendingChecks++
-			go checkUrl(newUrl, resultChan, urlDiscoveryChan, finishChan)
+			go checkUrl(discoveredUrl.url, resultChan, urlDiscoveryChan, finishChan)
 		}
 	}(urlDiscoveryChan)
 
@@ -89,7 +94,7 @@ func find404Errors(url string, limit int) bool {
 				finishOrLimitChan <- true
 			}
 			result := <-resultChan
-			fmt.Println(strconv.Itoa(result.status) + " " + result.url)
+			fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")")
 			count++
 		}
 	}(finishOrLimitChan)
@@ -98,7 +103,7 @@ func find404Errors(url string, limit int) bool {
 		for {
 			<-finishChan
 			pendingChecks--
-			fmt.Println("Check finished " + strconv.Itoa(pendingChecks))
+			// fmt.Println("Check finished " + strconv.Itoa(pendingChecks))
 			if pendingChecks == 0 {
 				finishOrLimitChan <- true	
 			}	
@@ -115,6 +120,6 @@ func find404Errors(url string, limit int) bool {
 
 
 func main() {
-	results := find404Errors("https://www.tgstatic.com/en", 100)
+	results := find404Errors("https://www.tgstatic.com/en", 200)
 	fmt.Println(results)
 }
