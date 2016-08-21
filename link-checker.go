@@ -17,6 +17,9 @@ type Result struct {
     status int
 }
 
+var (
+	knownUrls = make(map[string]bool)
+)
 
 /*
 Check an array of urls for 404 errors
@@ -50,10 +53,7 @@ func checkUrls(urls []string) (<-chan Result, <-chan bool) {
 }
 
 func checkUrl(url string, resultChan chan Result, finishChan chan bool) {
-
-
 	go func() {
-		//	r, err := http.Get("https://www.transfergo.com/lt")
 		r, err := http.Get(url)
 		if err != nil {
 			log.Fatal(err)
@@ -68,31 +68,37 @@ func checkUrl(url string, resultChan chan Result, finishChan chan bool) {
 			} else {
 				stringBody := fmt.Sprintf("%s", body)
 				utf8.RuneCountInString(stringBody)
-				//fmt.Println(stringBody)
-
 				newUrls := findUrls(stringBody)
-				for _,newUrl := range newUrls { //initialize checking of all URLs
-
-					fmt.Println(newUrl[1])
-  				}
+				registerNewUrls(newUrls)
+				// for _,newUrl := range newUrls {
+				// 	fmt.Println(newUrl)
+				// }
   			}
 			fmt.Println(url + " Succeeded")
 		}
-
-		//res := new(Result)
 		finishChan <- true
 	}()
 }
 
-func findUrls(html string) [][]string {
+func findUrls(html string) []string {
 	re := regexp.MustCompile("<a .* href=\"(https://www.tgstatic.com/[^\"]*)")
-	// fmt.Println(re.FindAllString("paranormal", -1))
-
-	return re.FindAllStringSubmatch(html, -1)
+	matches := re.FindAllStringSubmatch(html, -1)
+	var urls = []string{}
+	for _,match := range matches {
+		urls = append(urls, match[1])
+	}
+	return urls
 }
 
-func main() {
+func registerNewUrls(newUrls []string) {
+	for _,newUrl := range newUrls {
+		knownUrls[newUrl] = true
+	}
+}
 
+
+
+func main() {
 	urls := []string{"https://www.tgstatic.com/lt", "https://www.tgstatic.com/en"}
 	resultChan, finishChan := checkUrls(urls)
 	go func() {
@@ -100,7 +106,7 @@ func main() {
 		fmt.Println(result)
 	}()
 
-	
-
+	registerNewUrls([]string {"aaa", "bbb"})
 	<-finishChan
+	fmt.Println(knownUrls)
 }
