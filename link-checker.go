@@ -3,10 +3,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	//"io"
-	//"reflect"
 	"io/ioutil"
-	//"time"
 	"regexp"
 	"strconv"
 	"crypto/tls"
@@ -54,7 +51,7 @@ func checkUrl(url string, resultChan chan Result, singleUrlFinishChan chan bool)
 }
 
 func findUrls(html string) []string {
-	re := regexp.MustCompile("<a .* href=\"(https://www.tgstatic.com/[^\"]*)")
+	re := regexp.MustCompile("<a .* href=\"([^\"]*)")
 	matches := re.FindAllStringSubmatch(html, -1)
 	var urls = []string{}
 	for _,match := range matches {
@@ -64,7 +61,10 @@ func findUrls(html string) []string {
 }
 
 func findRoot(url string) string {
-	return "https://www.tgstatic.com/"
+	url = url + "/" //just in case url has no leading slash. More than one won't harm
+	re := regexp.MustCompile("https?://([^/]*/)")
+	root := re.FindString(url)
+	return root
 }
 
 func find404Errors(url string, limit int) bool {
