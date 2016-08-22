@@ -10,7 +10,7 @@ Extremely fast recursive link checker to detect broken links on your website. La
 - display progress counter
 
 ## How to use
-- download link-checker.go file and place it somewhere
+- download link-checker.go file
 - install go language. Installation depends on your OS. Use Google to find out how ot do this step
 - open a terminal window
 - navigate to the directtory, where you have downloaded the file
