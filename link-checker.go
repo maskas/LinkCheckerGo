@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strconv"
 	"crypto/tls"
+	"log"
 )
 
 //routine
@@ -126,6 +127,9 @@ func find404Errors(url string, limit int) bool {
 
 
 func main() {
+	if len(os.Args) != 3 {
+		log.Fatal("Invalid number of arguments.\nUsage example:\n\"go run link-checker.go http://example.com 100\"")
+	}
 	url := os.Args[1]
  	limit, _ := strconv.Atoi(os.Args[2])
 	results := find404Errors(url, limit)
