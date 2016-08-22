@@ -9,5 +9,8 @@ Extremely fast recursive link checker to detect broken links on your website. La
 - type: go run link-checker.go http://www.example.com 99 where 99 is the max count of URLs to be checked
 
 ## Limitations
+- doesn't support relative urls
+- doesn't support protocol relative urls, that starts with souble slash
 - checks only internal links. Outside links are not checked
-- broken images are not checked (onlyl links)
+- broken images are not checked (only links)
+ 
