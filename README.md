@@ -1,6 +1,14 @@
 # LinkCheckerGo
 Extremely fast recursive link checker to detect broken links on your website. Launches multiple routines at the same time to speed up the process.
 
+## Features
+- checks page for errors recursivelly, always staying within the boundaries of the same domain
+- lists all urls, that returns anything else than 200
+- has a parameter to limit count of URLs to be checked
+- supports HTTP and HTTPS
+- ignores invalid ssl certificates to let you check on the staging server
+- display progress counter
+
 ## How to use
 - download link-checker.go file and place it somewhere
 - install go language. Installation depends on your OS. Use Google to find out how ot do this step
