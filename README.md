@@ -18,7 +18,7 @@ Extremely fast recursive link checker to detect broken links on your website. La
 
 ## Limitations
 - doesn't support relative urls
-- doesn't support protocol relative urls, that starts with souble slash
+- doesn't support protocol relative urls, that starts with a double slash
 - checks only internal links. Outside links are not checked
 - broken images are not checked (only links)
  
