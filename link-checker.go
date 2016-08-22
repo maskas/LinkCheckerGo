@@ -10,6 +10,7 @@ import (
 	//"time"
 	"regexp"
 	"strconv"
+	"crypto/tls"
 )
 
 //routine
@@ -28,14 +29,19 @@ type DiscoveredUrl struct {
 func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan DiscoveredUrl, singleUrlFinishChan chan bool) {
 	go func() {
 		//fmt.Println("Checking url " + url)
-		r, err := http.Get(url)
+		tr := &http.Transport{ //we ignore ssl errors. This tool is for testing 404, not ssl.
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		client := &http.Client{Transport: tr}
+
+		r, err := client.Get(url)
 		if err != nil {
-			resultChan <- Result{url: url, status: 0, message: "Fatal error " + err.Error()}
+			resultChan <- Result{url: url, status: -1, message: "Fatal error " + err.Error()}
 		} else {
 			defer r.Body.Close()
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
-				resultChan <- Result{url: url, status: 0, message: "Fatal error " + err.Error()}
+				resultChan <- Result{url: url, status: -2, message: "Fatal error " + err.Error()}
 			} else {
 				stringBody := fmt.Sprintf("%s", body)
 				utf8.RuneCountInString(stringBody)
@@ -75,7 +81,7 @@ func find404Errors(url string, limit int) bool {
 		for {
 
 			discoveredUrl := <-urlDiscoveryChan
-			//fmt.Println("New URL " + newUrl)
+			//fmt.Println("New URL " + discoveredUrl.url)
 			//fmt.Println("Pending checks " + strconv.Itoa(pendingChecks))
 			if _, ok := knownUrls[discoveredUrl.url]; ok {
 				continue
@@ -94,7 +100,7 @@ func find404Errors(url string, limit int) bool {
 				finishOrLimitChan <- true
 			}
 			result := <-resultChan
-			fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")")
+			fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")" + " " + result.message)
 			count++
 		}
 	}(finishOrLimitChan)
