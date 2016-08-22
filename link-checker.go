@@ -82,13 +82,17 @@ func find404Errors(url string, limit int) bool {
 	go func(finishOrLimitChan chan bool, urlDiscoveryChan chan DiscoveredUrl) {
 		for {
 			if count == limit {
-				fmt.Println("Limit reached")
+				fmt.Println("The imit of " + strconv.Itoa(limit) + " urls has been reached reached. Pending URLs left " + strconv.Itoa(pendingChecks))
 				finishOrLimitChan <- true
 			}
 			result := <-resultChan
 			fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")" + " " + result.message)
 			newUrls := findUrls(result.body)
 			for _,newUrl := range newUrls {
+				if string([]rune(newUrl)[0]) == "/" { //make sure we have an absolute URL
+					newUrl = strings.Replace(newUrl, "/", urlRoot, 1)
+//fmt.Println("NEW URL -------------------------- " + newUrl)
+				}
 				if _, ok := knownUrls[newUrl]; ok {
 					continue
 				}
