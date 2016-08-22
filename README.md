@@ -1,5 +1,5 @@
 # LinkCheckerGo
-Extremely fast recursive link checker to detect broken links on your website. Launches multiple rutines at the same time to speed up the process.
+Extremely fast recursive link checker to detect broken links on your website. Launches multiple routines at the same time to speed up the process.
 
 ## How to use
 - download link-checker.go file and place it somewhere
