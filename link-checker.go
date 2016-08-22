@@ -6,12 +6,12 @@ import (
 	//"io"
 	//"reflect"
 	"io/ioutil"
-	"unicode/utf8"
 	//"time"
 	"regexp"
 	"strconv"
 	"crypto/tls"
 	"log"
+	"strings"
 )
 
 //routine
@@ -20,6 +20,7 @@ type Result struct {
     url string
     status int
     message string
+    body string
 }
 
 type DiscoveredUrl struct {
@@ -27,7 +28,7 @@ type DiscoveredUrl struct {
 	source string
 }
 
-func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan DiscoveredUrl, singleUrlFinishChan chan bool) {
+func checkUrl(url string, resultChan chan Result, singleUrlFinishChan chan bool) {
 	go func() {
 		//fmt.Println("Checking url " + url)
 		tr := &http.Transport{ //we ignore ssl errors. This tool is for testing 404, not ssl.
@@ -37,20 +38,15 @@ func checkUrl(url string, resultChan chan Result, urlDiscoveryChan chan Discover
 
 		r, err := client.Get(url)
 		if err != nil {
-			resultChan <- Result{url: url, status: -1, message: "Fatal error " + err.Error()}
+			resultChan <- Result{url: url, status: -1, message: "Fatal error " + err.Error(), body: ""}
 		} else {
 			defer r.Body.Close()
 			body, err := ioutil.ReadAll(r.Body)
 			if err != nil {
-				resultChan <- Result{url: url, status: -2, message: "Fatal error " + err.Error()}
+				resultChan <- Result{url: url, status: -2, message: "Fatal error " + err.Error(), body: ""}
 			} else {
 				stringBody := fmt.Sprintf("%s", body)
-				utf8.RuneCountInString(stringBody)
-				newUrls := findUrls(stringBody)
-				for _,newUrl := range newUrls {
-					urlDiscoveryChan <- DiscoveredUrl{url: newUrl, source: url}
-				}
-				resultChan <- Result{url: url, status: r.StatusCode, message: ""}
+				resultChan <- Result{url: url, status: r.StatusCode, message: "", body: stringBody}
   			}
 		}
 		singleUrlFinishChan <- true
@@ -67,6 +63,10 @@ func findUrls(html string) []string {
 	return urls
 }
 
+func findRoot(url string) string {
+	return "https://www.tgstatic.com/"
+}
+
 func find404Errors(url string, limit int) bool {
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan DiscoveredUrl)
@@ -77,24 +77,9 @@ func find404Errors(url string, limit int) bool {
 
 	finishOrLimitChan := make(chan bool)
 
+	urlRoot := findRoot(url)
 
-	go func(urlDiscoveryChan chan DiscoveredUrl) {
-		for {
-
-			discoveredUrl := <-urlDiscoveryChan
-			//fmt.Println("New URL " + discoveredUrl.url)
-			//fmt.Println("Pending checks " + strconv.Itoa(pendingChecks))
-			if _, ok := knownUrls[discoveredUrl.url]; ok {
-				continue
-			}
-			knownUrls[discoveredUrl.url] = discoveredUrl.source
-			//fmt.Println("New URL detected " + newUrl)
-			pendingChecks++
-			go checkUrl(discoveredUrl.url, resultChan, urlDiscoveryChan, finishChan)
-		}
-	}(urlDiscoveryChan)
-
-	go func(finishOrLimitChan chan bool) {
+	go func(finishOrLimitChan chan bool, urlDiscoveryChan chan DiscoveredUrl) {
 		for {
 			if count == limit {
 				fmt.Println("Limit reached")
@@ -102,9 +87,22 @@ func find404Errors(url string, limit int) bool {
 			}
 			result := <-resultChan
 			fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")" + " " + result.message)
+			newUrls := findUrls(result.body)
+			for _,newUrl := range newUrls {
+				if _, ok := knownUrls[newUrl]; ok {
+					continue
+				}
+				if !strings.HasPrefix(newUrl, urlRoot) {
+					continue
+				}
+				knownUrls[newUrl] = result.url
+				//fmt.Println("New URL detected " + newUrl)
+				pendingChecks++
+				go checkUrl(newUrl, resultChan, finishChan)
+			}
 			count++
 		}
-	}(finishOrLimitChan)
+	}(finishOrLimitChan, urlDiscoveryChan)
 
 	go func(finishChan <-chan bool, finishOrLimitChan chan bool) {
 		for {
@@ -118,8 +116,7 @@ func find404Errors(url string, limit int) bool {
 	}(finishChan, finishOrLimitChan)
 
 	//init the first check
-	go checkUrl(url, resultChan, urlDiscoveryChan, finishChan)
-
+	go checkUrl(url, resultChan, finishChan)
 
 	<-finishOrLimitChan
 	return true
