@@ -2,7 +2,7 @@ package main
 import (
 	"fmt"
 	"net/http"
-	//"os"
+	"os"
 	//"io"
 	//"reflect"
 	"io/ioutil"
@@ -126,6 +126,8 @@ func find404Errors(url string, limit int) bool {
 
 
 func main() {
-	results := find404Errors("https://www.tgstatic.com/en", 200)
+	url := os.Args[1]
+ 	limit, _ := strconv.Atoi(os.Args[2])
+	results := find404Errors(url, limit)
 	fmt.Println(results)
 }
