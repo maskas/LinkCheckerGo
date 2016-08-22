@@ -27,7 +27,6 @@ type DiscoveredUrl struct {
 
 func checkUrl(url string, resultChan chan Result, singleUrlFinishChan chan bool) {
 	go func() {
-		//fmt.Println("Checking url " + url)
 		tr := &http.Transport{ //we ignore ssl errors. This tool is for testing 404, not ssl.
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
@@ -82,16 +81,20 @@ func find404Errors(url string, limit int) bool {
 	go func(finishOrLimitChan chan bool, urlDiscoveryChan chan DiscoveredUrl) {
 		for {
 			if count == limit {
-				fmt.Println("The imit of " + strconv.Itoa(limit) + " urls has been reached reached. Pending URLs left " + strconv.Itoa(pendingChecks))
+				fmt.Println("The imit of " + strconv.Itoa(limit) + " urls has been reached. Pending URLs left " + strconv.Itoa(pendingChecks))
 				finishOrLimitChan <- true
+				break
 			}
 			result := <-resultChan
-			fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")" + " " + result.message)
+			if result.status == 200 {
+				fmt.Println("OK " + result.url)
+			} else {
+				fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")" + " " + result.message)
+			}
 			newUrls := findUrls(result.body)
 			for _,newUrl := range newUrls {
 				if string([]rune(newUrl)[0]) == "/" { //make sure we have an absolute URL
 					newUrl = strings.Replace(newUrl, "/", urlRoot, 1)
-//fmt.Println("NEW URL -------------------------- " + newUrl)
 				}
 				if _, ok := knownUrls[newUrl]; ok {
 					continue
@@ -100,7 +103,6 @@ func find404Errors(url string, limit int) bool {
 					continue
 				}
 				knownUrls[newUrl] = result.url
-				//fmt.Println("New URL detected " + newUrl)
 				pendingChecks++
 				go checkUrl(newUrl, resultChan, finishChan)
 			}
@@ -112,7 +114,6 @@ func find404Errors(url string, limit int) bool {
 		for {
 			<-finishChan
 			pendingChecks--
-			// fmt.Println("Check finished " + strconv.Itoa(pendingChecks))
 			if pendingChecks == 0 {
 				finishOrLimitChan <- true	
 			}	
