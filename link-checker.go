@@ -82,7 +82,6 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 	go func(finishOrLimitChan chan bool, urlDiscoveryChan chan DiscoveredUrl) {
 		for {
 			if count == limit {
-				fmt.Println("The imit of " + strconv.Itoa(limit) + " urls has been reached.")
 				finishOrLimitChan <- true
 				break
 			}
@@ -104,8 +103,6 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 				go checkUrl(newUrl, result.url, resultChan, finishChan)
 			}
 			count++
-			fmt.Print("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
-			fmt.Print("Checked URLs: " + strconv.Itoa(count))
 		}
 	}(finishOrLimitChan, urlDiscoveryChan)
 
