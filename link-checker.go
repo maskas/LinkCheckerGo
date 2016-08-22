@@ -67,6 +67,7 @@ func findRoot(url string) string {
 }
 
 func find404Errors(url string, limit int) bool {
+	fmt.Println("Checking website for errors (" + url + "). Max count of URLs to be checked " + strconv.Itoa(limit))
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan DiscoveredUrl)
 	finishChan := make(chan bool)
@@ -81,15 +82,16 @@ func find404Errors(url string, limit int) bool {
 	go func(finishOrLimitChan chan bool, urlDiscoveryChan chan DiscoveredUrl) {
 		for {
 			if count == limit {
-				fmt.Println("The imit of " + strconv.Itoa(limit) + " urls has been reached. Pending URLs left " + strconv.Itoa(pendingChecks))
+				fmt.Println("The imit of " + strconv.Itoa(limit) + " urls has been reached.")
 				finishOrLimitChan <- true
 				break
 			}
 			result := <-resultChan
+
 			if result.status == 200 {
-				fmt.Println("OK " + result.url)
+				//fmt.Println("OK " + result.url)
 			} else {
-				fmt.Println(strconv.Itoa(result.status) + " " + result.url + " (" + knownUrls[result.url] + ")" + " " + result.message)
+				fmt.Println("Error: HTTP status " + strconv.Itoa(result.status) + ", Url " + result.url + ", Source " + knownUrls[result.url] + " " + result.message)
 			}
 			newUrls := findUrls(result.body)
 			for _,newUrl := range newUrls {
