@@ -26,7 +26,7 @@ type DiscoveredUrl struct {
 	source string
 }
 
-func checkUrl(url string, source string, resultChan chan Result, singleUrlFinishChan chan bool) {
+func checkUrl(url string, source string, resultChan chan Result) {
 	go func() {
 		tr := &http.Transport{ //we ignore ssl errors. This tool is for testing 404, not ssl.
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -46,7 +46,6 @@ func checkUrl(url string, source string, resultChan chan Result, singleUrlFinish
 				resultChan <- Result{url: url, source: source, status: r.StatusCode, message: "", body: stringBody}
   			}
 		}
-		singleUrlFinishChan <- true
 	}()
 }
 
@@ -70,7 +69,6 @@ func findRoot(url string) string {
 func checkWebsite(url string, limit int, statsChan chan Result) bool {
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan DiscoveredUrl)
-	finishChan := make(chan bool)
 	pendingChecks := 1
 	count := 0
 	knownUrls := make(map[string]string)
@@ -85,7 +83,9 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 				finishOrLimitChan <- true
 				break
 			}
+
 			result := <- resultChan
+			pendingChecks--
 			statsChan <- result
 			newUrls := findUrls(result.body)
 			for _,newUrl := range newUrls {
@@ -100,24 +100,18 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 				}
 				knownUrls[newUrl] = result.url
 				pendingChecks++
-				go checkUrl(newUrl, result.url, resultChan, finishChan)
+				go checkUrl(newUrl, result.url, resultChan)
 			}
 			count++
+			if pendingChecks == 0 {
+				finishOrLimitChan <- true
+				break
+			}
 		}
 	}(finishOrLimitChan, urlDiscoveryChan)
 
-	go func(finishChan <-chan bool, finishOrLimitChan chan bool) {
-		for {
-			<-finishChan
-			pendingChecks--
-			if pendingChecks == 0 {
-				finishOrLimitChan <- true	
-			}	
-		}
-	}(finishChan, finishOrLimitChan)
-
 	//init the first check
-	go checkUrl(url, "", resultChan, finishChan)
+	go checkUrl(url, "", resultChan)
 
 	<-finishOrLimitChan
 	return true
@@ -154,6 +148,6 @@ func main() {
 		}
 	}(statsChan)
 
-	results := checkWebsite(url, limit, statsChan)
-	fmt.Println(results)
+	checkWebsite(url, limit, statsChan)
+	fmt.Println()
 }
