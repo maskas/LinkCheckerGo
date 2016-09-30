@@ -130,7 +130,7 @@ func main() {
 	statsChan := make(chan Result)
  	limit, _ := strconv.Atoi(os.Args[2])
  	displayProgress := true
- 	if (len(os.Args) >= 3) {
+ 	if (len(os.Args) > 3) {
  		displayProgress = os.Args[3] == "1" || os.Args[3] == "true"
  	}
  	
@@ -161,6 +161,7 @@ func main() {
 	checkWebsite(url, limit, statsChan)
 	fmt.Println()
 
+	fmt.Println("Total URLs checked: " + strconv.Itoa(count))
 	if errorCount == 0 {
 		fmt.Println("No broken URLs")
 	} else {
