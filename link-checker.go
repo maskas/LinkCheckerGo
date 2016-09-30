@@ -123,18 +123,24 @@ func removeLineContent() {
 
 
 func main() {
-	if len(os.Args) != 3 {
+	if len(os.Args) != 3 && len(os.Args) != 4 {
 		log.Fatal("Invalid number of arguments.\nUsage example:\n\"go run link-checker.go http://example.com 100\"")
 	}
 	url := os.Args[1]
 	statsChan := make(chan Result)
  	limit, _ := strconv.Atoi(os.Args[2])
+ 	displayProgress := true
+ 	if (len(os.Args) >= 3) {
+ 		displayProgress = os.Args[3] == "1" || os.Args[3] == "true"
+ 	}
+ 	
 
 	count := 0
 
 	fmt.Println("Website to be checked " + url + ".")
 	fmt.Println("Max count of URLs to be checked " + strconv.Itoa(limit))
 
+	errorCount := 0
 
 	go func(statsChan chan Result) {
 		for {
@@ -142,12 +148,23 @@ func main() {
 			count++
 			removeLineContent()
 			if result.status != 200 {
-				fmt.Println("Error: HTTP status " + strconv.Itoa(result.status) + ", Url " + result.url + ", Source " + result.source + " " + result.message)
+				errorCount++
+				fmt.Println("Error: HTTP status " + strconv.Itoa(result.status) + ", Url " + result.url + ", Source " + result.source + " " + result.message)	
 			}
-			fmt.Print("URLs checked " + strconv.Itoa(count))
+			if (displayProgress) {
+				fmt.Print("URLs checked " + strconv.Itoa(count))
+			}
+
 		}
 	}(statsChan)
 
 	checkWebsite(url, limit, statsChan)
 	fmt.Println()
+
+	if errorCount == 0 {
+		fmt.Println("No broken URLs")
+	} else {
+		fmt.Println("Broken URLs: " + strconv.Itoa(errorCount))
+		os.Exit(1)
+	}
 }
