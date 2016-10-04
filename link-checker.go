@@ -87,21 +87,30 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 			result := <- resultChan
 			pendingChecks--
 			statsChan <- result
-			newUrls := findUrls(result.body)
-			for _,newUrl := range newUrls {
-				if string([]rune(newUrl)[0]) == "/" { //make sure we have an absolute URL
-					newUrl = strings.Replace(newUrl, "/", urlRoot, 1)
+//fmt.Println(result.url)
+			if strings.HasPrefix(result.url, urlRoot) {
+				//parse page urls only if this page is on our domain
+				newUrls := findUrls(result.body)
+				for _,newUrl := range newUrls {
+					if string([]rune(newUrl)[0]) == "/" { //make sure we have an absolute URL
+						newUrl = strings.Replace(newUrl, "/", urlRoot, 1)
+					}
+					if string([]rune(newUrl)[0]) == "#" { //make sure we have an absolute URL
+						continue
+					}
+					if _, ok := knownUrls[newUrl]; ok {
+						continue
+					}
+					if !strings.HasPrefix(newUrl, urlRoot) {
+						//fmt.Println(newUrl)
+						//continue
+					}
+					knownUrls[newUrl] = result.url
+					pendingChecks++
+					go checkUrl(newUrl, result.url, resultChan)
 				}
-				if _, ok := knownUrls[newUrl]; ok {
-					continue
-				}
-				if !strings.HasPrefix(newUrl, urlRoot) {
-					continue
-				}
-				knownUrls[newUrl] = result.url
-				pendingChecks++
-				go checkUrl(newUrl, result.url, resultChan)
-			}
+			}			
+
 			count++
 			if pendingChecks == 0 {
 				finishOrLimitChan <- true
@@ -158,7 +167,9 @@ func main() {
 		}
 	}(statsChan)
 
+	
 	checkWebsite(url, limit, statsChan)
+	removeLineContent()	
 	fmt.Println()
 
 	fmt.Println("Total URLs checked: " + strconv.Itoa(count))
