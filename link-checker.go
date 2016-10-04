@@ -181,6 +181,9 @@ func main() {
  	if (len(os.Args) > 3) {
  		displayProgress = os.Args[3] == "1" || os.Args[3] == "true"
  	}
+ 	if url[len(url) - 1:] != "/" {
+ 		url = url + "/"
+ 	}
  	
 
 	count := 0
