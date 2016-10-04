@@ -119,6 +119,9 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 				//parse page urls only if this page is on our domain
 				newUrls := findUrls(result.body)
 				for _,newUrl := range newUrls {
+					if strings.HasPrefix(newUrl, "//") { //protocol relative url
+						newUrl = urlRoot[0:strings.Index(urlRoot, ":") + 1] + newUrl
+					}
 					if string([]rune(newUrl)[0]) == "/" { //make sure we have an absolute URL
 						newUrl = strings.Replace(newUrl, "/", urlRoot, 1)
 					}
