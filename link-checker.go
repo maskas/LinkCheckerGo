@@ -38,15 +38,20 @@ func checkUrl(url string, source string, resultChan chan Result) {
 		if err != nil {
 			resultChan <- Result{url: url, source: source, status: -1, message: "Fatal error " + err.Error(), body: ""}
 		} else {
-			defer r.Body.Close()
-			body, err := ioutil.ReadAll(r.Body)
-			if err != nil {
-				resultChan <- Result{url: url, source: source, status: -2, message: "Fatal error " + err.Error(), body: ""}
-			} else {
-				contentType := r.Header["Content-Type"][0]			
-				stringBody := fmt.Sprintf("%s", body)
-				resultChan <- Result{url: url, source: source, status: r.StatusCode, message: "", body: stringBody, contentType: contentType}
-  			}
+			contentType := r.Header["Content-Type"][0]
+			result := Result{url: url, source: source, status: r.StatusCode, message: "", body: "", contentType: contentType}
+			if isHtmlContentType(contentType) {
+				defer r.Body.Close()
+				body, err := ioutil.ReadAll(r.Body)
+				if err != nil {
+					result.status = -2
+					result.message = "Fatal error " + err.Error()
+				} else {
+					result.body = fmt.Sprintf("%s", body)
+	  			}				
+			}
+
+			resultChan <- result
 		}
 	}()
 }
@@ -110,7 +115,7 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 			pendingChecks--
 			statsChan <- result
 
-			if strings.HasPrefix(result.url, urlRoot) && strings.Contains(result.contentType, "text/html") {
+			if strings.HasPrefix(result.url, urlRoot) && isHtmlContentType(result.contentType) {
 				//parse page urls only if this page is on our domain
 				newUrls := findUrls(result.body)
 				for _,newUrl := range newUrls {
@@ -151,6 +156,10 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 
 	<-finishOrLimitChan
 	return true
+}
+
+func isHtmlContentType(header string) bool {
+	return strings.Contains(header, "text/html") 
 }
 
 func removeLineContent() {
