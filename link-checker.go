@@ -50,12 +50,20 @@ func checkUrl(url string, source string, resultChan chan Result) {
 }
 
 func findUrls(html string) []string {
+	var urls = []string{}
+	
 	re := regexp.MustCompile("<a .* href=\"([^\"]*)")
 	matches := re.FindAllStringSubmatch(html, -1)
-	var urls = []string{}
 	for _,match := range matches {
 		urls = append(urls, match[1])
 	}
+
+	re = regexp.MustCompile("<img .* src=\"([^\"]*)")
+	matches = re.FindAllStringSubmatch(html, -1)
+	for _,match := range matches {
+		urls = append(urls, match[1])
+	}
+
 	return urls
 }
 
@@ -95,7 +103,10 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 					if string([]rune(newUrl)[0]) == "/" { //make sure we have an absolute URL
 						newUrl = strings.Replace(newUrl, "/", urlRoot, 1)
 					}
-					if string([]rune(newUrl)[0]) == "#" { //make sure we have an absolute URL
+					if string([]rune(newUrl)[0]) == "#" { //skip if this is an internal link
+						continue
+					}
+					if strings.HasPrefix(newUrl, "mailto:") { //skip email urls
 						continue
 					}
 					if _, ok := knownUrls[newUrl]; ok {
