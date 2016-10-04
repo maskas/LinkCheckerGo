@@ -70,6 +70,12 @@ func findUrls(html string) []string {
 		urls = append(urls, match[1])
 	}
 
+	re = regexp.MustCompile("<script .*src=\"([^\"]*)")
+	matches = re.FindAllStringSubmatch(html, -1)
+	for _,match := range matches {
+		urls = append(urls, match[1])
+	}
+
 	return urls
 }
 
