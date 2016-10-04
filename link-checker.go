@@ -19,6 +19,7 @@ type Result struct {
     status int
     message string
     body string
+    contentType string
 }
 
 type DiscoveredUrl struct {
@@ -42,8 +43,9 @@ func checkUrl(url string, source string, resultChan chan Result) {
 			if err != nil {
 				resultChan <- Result{url: url, source: source, status: -2, message: "Fatal error " + err.Error(), body: ""}
 			} else {
+				contentType := r.Header["Content-Type"][0]			
 				stringBody := fmt.Sprintf("%s", body)
-				resultChan <- Result{url: url, source: source, status: r.StatusCode, message: "", body: stringBody}
+				resultChan <- Result{url: url, source: source, status: r.StatusCode, message: "", body: stringBody, contentType: contentType}
   			}
 		}
 	}()
@@ -108,7 +110,7 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 			pendingChecks--
 			statsChan <- result
 
-			if strings.HasPrefix(result.url, urlRoot) {
+			if strings.HasPrefix(result.url, urlRoot) && strings.Contains(result.contentType, "text/html") {
 				//parse page urls only if this page is on our domain
 				newUrls := findUrls(result.body)
 				for _,newUrl := range newUrls {
