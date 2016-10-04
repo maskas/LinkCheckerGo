@@ -87,7 +87,7 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 			result := <- resultChan
 			pendingChecks--
 			statsChan <- result
-//fmt.Println(result.url)
+
 			if strings.HasPrefix(result.url, urlRoot) {
 				//parse page urls only if this page is on our domain
 				newUrls := findUrls(result.body)
@@ -109,6 +109,8 @@ func checkWebsite(url string, limit int, statsChan chan Result) bool {
 					pendingChecks++
 					go checkUrl(newUrl, result.url, resultChan)
 				}
+			} else {
+				//fmt.Println(result.url)
 			}			
 
 			count++
