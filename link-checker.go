@@ -1,7 +1,7 @@
 package main
 import (
 	"fmt"
-	// "encoding/json"
+	"encoding/json"
 	"net/http"
 	"os"
 	"io/ioutil"
@@ -195,7 +195,18 @@ func removeLineContent() {
 	fmt.Print("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
 }
 
-func parseConfig(args []string) Configuration {
+func parseConfigFile(filePath string) Configuration {
+	file, _ := os.Open(filePath)
+	decoder := json.NewDecoder(file)
+	config := Configuration{}
+	err := decoder.Decode(&config)
+	if err != nil {
+	  log.Fatal("error:", err)
+	}
+	return config
+}
+
+func parseArgs(args []string) Configuration {
 	if len(args) != 3 && len(args) != 4 {
 		log.Fatal("Invalid number of arguments.\nUsage example:\n\"go run link-checker.go http://example.com 100\"")
 	}
@@ -219,7 +230,12 @@ func parseConfig(args []string) Configuration {
 
 
 func main() {
-	config := parseConfig(os.Args)
+	config := Configuration{}
+	if len(os.Args) == 2 {
+		config = parseConfigFile(os.Args[1])
+	} else {
+		config = parseArgs(os.Args)
+	}
 
 	statsChan := make(chan Result)
  	
