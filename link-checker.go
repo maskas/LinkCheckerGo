@@ -119,12 +119,16 @@ func findRoot(url string) string {
 	return root
 }
 
-func checkWebsite(url string, limit int, statsChan chan Result) bool {
+func checkWebsite(url string, limit int, urlsToIgnore []string, statsChan chan Result) bool {
 	resultChan := make(chan Result)
 	urlDiscoveryChan := make(chan DiscoveredUrl)
 	pendingChecks := 1
 	count := 0
 	knownUrls := make(map[string]string)
+
+	for _, knownUrl := range urlsToIgnore {
+    	knownUrls[knownUrl] = knownUrl
+	}
 
 	finishOrLimitChan := make(chan bool)
 
@@ -265,7 +269,7 @@ func main() {
 	}(statsChan)
 
 	
-	checkWebsite(config.Url, config.Limit, statsChan)
+	checkWebsite(config.Url, config.Limit, config.UrlsToIgnore, statsChan)
 	removeLineContent()	
 	fmt.Println()
 
