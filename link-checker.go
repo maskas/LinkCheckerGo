@@ -1,6 +1,7 @@
 package main
 import (
 	"fmt"
+	// "encoding/json"
 	"net/http"
 	"os"
 	"io/ioutil"
@@ -20,6 +21,13 @@ type Result struct {
     message string
     body string
     contentType string
+}
+
+type Configuration struct {
+    Url string
+    Limit int
+    DisplayProgress bool
+    UrlsToIgnore []string
 }
 
 type DiscoveredUrl struct {
@@ -187,27 +195,39 @@ func removeLineContent() {
 	fmt.Print("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b")
 }
 
-
-func main() {
-	if len(os.Args) != 3 && len(os.Args) != 4 {
+func parseConfig(args []string) Configuration {
+	if len(args) != 3 && len(args) != 4 {
 		log.Fatal("Invalid number of arguments.\nUsage example:\n\"go run link-checker.go http://example.com 100\"")
 	}
-	url := os.Args[1]
-	statsChan := make(chan Result)
- 	limit, _ := strconv.Atoi(os.Args[2])
+	url := args[1]
+ 	limit, _ := strconv.Atoi(args[2])
  	displayProgress := true
- 	if (len(os.Args) > 3) {
- 		displayProgress = os.Args[3] == "1" || os.Args[3] == "true"
+ 	if (len(args) > 3) {
+ 		displayProgress = args[3] == "1" || args[3] == "true"
  	}
  	if url[len(url) - 1:] != "/" {
  		url = url + "/"
  	}
+
+ 	config := Configuration {
+ 		Url: url,
+ 		Limit: limit,
+ 		DisplayProgress: displayProgress}
+ 		
+ 	return config
+}
+
+
+func main() {
+	config := parseConfig(os.Args)
+
+	statsChan := make(chan Result)
  	
 
 	count := 0
 
-	fmt.Println("Website to be checked " + url + ".")
-	fmt.Println("Max count of URLs to be checked " + strconv.Itoa(limit))
+	fmt.Println("Website to be checked " + config.Url + ".")
+	fmt.Println("Max count of URLs to be checked " + strconv.Itoa(config.Limit))
 
 	errorCount := 0
 
@@ -220,7 +240,7 @@ func main() {
 				errorCount++
 				fmt.Println("Error: HTTP status " + strconv.Itoa(result.status) + ", Url " + result.url + ", Source " + result.source + " " + result.message)	
 			}
-			if (displayProgress) {
+			if (config.DisplayProgress) {
 				fmt.Print("URLs checked " + strconv.Itoa(count))
 			}
 
@@ -228,7 +248,7 @@ func main() {
 	}(statsChan)
 
 	
-	checkWebsite(url, limit, statsChan)
+	checkWebsite(config.Url, config.Limit, statsChan)
 	removeLineContent()	
 	fmt.Println()
 
