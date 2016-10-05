@@ -1,6 +1,6 @@
 {
-   "Url": "https://www.tgstatic.com",
-   "Limit": "1000",
+   "Url": "https://example.com",
+   "Limit": 1000,
    "DisplayProgress": true,
-   "UrlsToIgnore": ["https://www.tgstatic.com/en/page/jobs"]
+   "UrlsToIgnore": []
 }

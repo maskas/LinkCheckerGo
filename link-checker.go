@@ -216,9 +216,6 @@ func parseArgs(args []string) Configuration {
  	if (len(args) > 3) {
  		displayProgress = args[3] == "1" || args[3] == "true"
  	}
- 	if url[len(url) - 1:] != "/" {
- 		url = url + "/"
- 	}
 
  	config := Configuration {
  		Url: url,
@@ -236,6 +233,10 @@ func main() {
 	} else {
 		config = parseArgs(os.Args)
 	}
+
+	 if config.Url[len(config.Url) - 1:] != "/" {
+ 		config.Url = config.Url + "/"
+ 	}
 
 	statsChan := make(chan Result)
  	
