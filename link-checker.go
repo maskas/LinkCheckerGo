@@ -39,7 +39,7 @@ func checkUrl(url string, source string, resultChan chan Result) {
 		if err != nil {
             resultChan <- Result{url: url, source: source, status: -2, message: "Fatal error " + err.Error(), body: ""}
         }
-        req.Header.Set("User-Agent", "LinkChecker_Spider_Bot/1.0")
+        req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.116 Safari/537.36")
 
         r, err := client.Do(req)
 
