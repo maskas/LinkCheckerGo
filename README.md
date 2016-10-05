@@ -8,6 +8,7 @@ Extremely fast recursive link checker to detect broken links and images on your 
 - supports HTTP and HTTPS
 - ignores invalid ssl certificates to let you check on the staging server
 - display progress counter
+- returns propper exit status
 
 ## How to use
 - download link-checker.go file
@@ -15,4 +16,5 @@ Extremely fast recursive link checker to detect broken links and images on your 
 - open a terminal window
 - navigate to the directory, where you have downloaded the file
 - type: `go run link-checker.go http://www.example.com 99` where 99 is the max count of URLs to be checked
+- add false at the end to disable progress 
  
