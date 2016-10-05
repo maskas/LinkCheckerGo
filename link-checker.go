@@ -34,7 +34,25 @@ func checkUrl(url string, source string, resultChan chan Result) {
 		}
 		client := &http.Client{Transport: tr}
 
-		r, err := client.Get(url)
+		req, err := http.NewRequest("GET", url, nil)
+		
+		if err != nil {
+            resultChan <- Result{url: url, source: source, status: -2, message: "Fatal error " + err.Error(), body: ""}
+        }
+        req.Header.Set("User-Agent", "LinkChecker_Spider_Bot/1.0")
+
+        r, err := client.Do(req)
+
+		if err != nil { 
+			//retrying in a simple way in case we had any network issues
+			r, err = client.Do(req)
+			if err != nil {
+				//retry
+				r, err = client.Do(req)
+			}
+		}
+
+
 		if err != nil {
 			resultChan <- Result{url: url, source: source, status: -1, message: "Fatal error " + err.Error(), body: ""}
 		} else {
