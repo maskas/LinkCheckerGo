@@ -10,6 +10,7 @@ import (
 	"crypto/tls"
 	"log"
 	"strings"
+	"time"
 )
 
 //routine
@@ -169,6 +170,9 @@ func checkWebsite(url string, limit int, urlsToIgnore []string, statsChan chan R
 						//continue
 					}
 					knownUrls[newUrl] = result.url
+					if pendingChecks > 10  {
+						time.Sleep(1)
+					}
 					pendingChecks++
 					go checkUrl(newUrl, result.url, resultChan)
 				}
