@@ -170,7 +170,7 @@ func checkWebsite(url string, limit int, urlsToIgnore []string, statsChan chan R
 						//continue
 					}
 					knownUrls[newUrl] = result.url
-					if pendingChecks > 10  {
+					if pendingChecks > 5  {
 						time.Sleep(1)
 					}
 					pendingChecks++
