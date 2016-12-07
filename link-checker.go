@@ -173,12 +173,15 @@ func checkWebsite(url string, limit int, urlsToIgnore []string, statsChan chan R
 					if pendingChecks > 5  {
 						time.Sleep(1)
 					}
+					if pendingChecks > 10 {
+						time.Sleep(5)
+                                        }
 					pendingChecks++
 					go checkUrl(newUrl, result.url, resultChan)
 				}
 			} else {
 				//fmt.Println(result.url)
-			}			
+			}
 
 			count++
 			if pendingChecks == 0 {
