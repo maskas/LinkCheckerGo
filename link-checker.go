@@ -52,10 +52,10 @@ func checkUrl(url string, source string, resultChan chan Result) {
 
         r, err := client.Do(req)
 
-		if err != nil { 
+		if err != nil || r.StatusCode == 504 {
 			//retrying in a simple way in case we had any network issues
 			r, err = client.Do(req)
-			if err != nil {
+			if err != nil || r.StatusCode == 504 {
 				//retry
 				r, err = client.Do(req)
 			}
