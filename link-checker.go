@@ -162,6 +162,10 @@ func checkWebsite(url string, limit int, urlsToIgnore []string, statsChan chan R
 					if strings.HasPrefix(newUrl, "mailto:") { //skip email urls
 						continue
 					}
+					if strings.HasPrefix(newUrl, "data:") { //skip email urls
+						continue
+					}
+
 					if _, ok := knownUrls[newUrl]; ok {
 						continue
 					}
