@@ -15,6 +15,6 @@ Extremely fast recursive link checker to detect broken links and images on your 
 - install go language. Installation depends on your OS. Use Google to find out how ot do this step
 - open a terminal window
 - navigate to the directory, where you have downloaded the file
-- type: `go run link-checker.go http://www.example.com 99` where 99 is the max count of URLs to be checked
+- type: `go run *.go http://www.example.com 99` where 99 is the max count of URLs to be checked
 - add false at the end to disable progress 
  
